@@ -1,0 +1,7 @@
+NCE follows the strategy to avoid computationally expensive step in language modelling task like calculating log likelihood for entire vocab. The idea here is to build a classifier that can give high probabilities to words
+that are the correct target words (i.e., wo) and low probabilities to words that are
+incorrect target words.
+
+The idea is to convert a multinomial classification problem as it is the problem of predicting the next word to a binary classification problem. That is, instead of using softmax to estimate a true probability distribution of the output word, a binary logistic regression binary classification is used instead.
+
+For each training sample, the enhanced (optimized) classifier is fed a true pair (a center word and another word that appears in its context) and a number of kk randomly corrupted pairs (consisting of the center word and a randomly chosen word from the vocabulary). By learning to distinguish the true pairs from corrupted ones, the classifier will ultimately learn the word vectors.
