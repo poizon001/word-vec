@@ -53,29 +53,19 @@ def nce_loss(inputs, weights, biases, labels, sample, unigram_prob):
 
     #Context word vector (batch_sizexembedding_size)
     context_words = inputs
-    # print("Context word vector")
-    # print(context_words)
 
     #Bias vector specific to target word vector
     bias_for_target_words = tf.nn.embedding_lookup(biases, labels)
-    # print("Bias vector specific to target word vector")
-    # print(bias_for_target_words)
 
     #Convert to tensors as unigram_prob is scalar
     target_words_unigram_prob = tf.convert_to_tensor(unigram_prob, dtype=tf.float32)
     #Unigram probabilities for target word vectors
     target_words_unigram_prob = tf.nn.embedding_lookup(target_words_unigram_prob, labels)
-    # print("Unigram probabilities for target word vectors")
-    # print(target_words_unigram_prob)
-
     
     #Calculating dot product of context_words and target_words
     context_target_dot_product = tf.reshape(tf.reduce_sum(tf.multiply(context_words, target_words), axis=1), [batch_size, 1])
     context_target_dot_product = tf.add(context_target_dot_product, bias_for_target_words)
-    # print("Calculating dot product of context_target_dot_product")
-    # print(context_target_dot_product)
 
-    
     sample_size = len(sample)
     #Convert to tensor as it is np array
     sample = tf.convert_to_tensor(sample, dtype=tf.int32)
@@ -86,18 +76,13 @@ def nce_loss(inputs, weights, biases, labels, sample, unigram_prob):
     target_words_unigram_prob = tf.log(tf.scalar_mul(sample_size, target_words_unigram_prob))
     target_words_unigram_prob = tf.subtract(context_target_dot_product, target_words_unigram_prob)
     target_words_unigram_prob = tf.log(tf.add(tf.sigmoid(target_words_unigram_prob), target_words_unigram_prob_add))
-    # print("target_words_unigram_prob")
-    # print(target_words_unigram_prob)
 
     #Creating negative target words by using sample (sample_sizexembedding_size)
     neg_target_words = tf.nn.embedding_lookup(weights, sample)
-    # print("neg_target_words")
-    # print(neg_target_words)
 
     neg_unigram_prob = tf.convert_to_tensor(unigram_prob, dtype=tf.float32)
     neg_unigram_prob = tf.reshape(tf.nn.embedding_lookup(neg_unigram_prob, sample), [sample_size, 1])
-    # print("Neg unigram prob")
-    # print(neg_unigram_prob)
+
     #Negative unigram prob has size (sample_sizex1), Need to change it to dim (batch_sizexsample_size)
     neg_target_word_unigram_probs = tf.transpose(neg_unigram_prob)
     neg_target_word_unigram_probs = tf.tile(neg_target_word_unigram_probs, [batch_size, 1])
@@ -109,47 +94,28 @@ def nce_loss(inputs, weights, biases, labels, sample, unigram_prob):
     bias_for_neg_target_words = tf.transpose(bias_for_neg_target_words)
     #(batch_sizexsample_size)
     bias_for_neg_target_words = tf.tile(bias_for_neg_target_words, [batch_size, 1])
-    # print("Negative bias")
-    # print(bias_for_neg_target_words)
 
     #Calculating dot product of context_words and neg_target_words (batch_sizexsample_size)
     # print("Calculating dot product of context_words and neg_target_words")
     context_neg_target_dot_product = tf.matmul(context_words, neg_target_words, transpose_b=True)
-    # print("Neg dot product")
-    # print(context_neg_target_dot_product)
     
     #Addng bias to the dot product (batch_sizexsample_size)
     context_neg_target_dot_product = tf.add(context_neg_target_dot_product, bias_for_neg_target_words)
-    # print("Neg dot product with bias")
-    # print(context_neg_target_dot_product)
-
 
     #scalar multipication with sample size
     neg_target_word_unigram_probs = tf.log(tf.scalar_mul(sample_size, neg_target_word_unigram_probs))
 
-    # print("neg_target_word_unigram_probs")
-    # print(neg_target_word_unigram_probs)
-
     neg_target_word_unigram_probs = tf.subtract(context_neg_target_dot_product, neg_target_word_unigram_probs)
-    # print("subtract context_neg_target_dot_product and neg_target_word_unigram_probs")
-    # print(neg_target_word_unigram_probs)
-
 
     total_prob = tf.fill([batch_size, sample_size], 1.0)
-    # print("Total prob")
-    # print(total_prob)
+
     neg_target_word_unigram_probs = tf.subtract(total_prob, tf.sigmoid(neg_target_word_unigram_probs))
-    # print ("neg_target_word_unigram_probs after log and sigmoid")
-    # print(neg_target_word_unigram_probs)
 
     #Creating matrix for adding to neg_unigram_prob so it doesn't got to NAN
     neg_target_word_unigram_probs_add = tf.fill([batch_size, sample_size], 0.0000000001)
     neg_target_word_unigram_probs = tf.reduce_sum(tf.log(tf.add(neg_target_word_unigram_probs, neg_target_word_unigram_probs_add)), axis=1)
     neg_target_word_unigram_probs = tf.reshape(neg_target_word_unigram_probs, [batch_size, 1])
-    # print("neg_target_word_unigram_probs")
-    # print(neg_target_word_unigram_probs)
 
     batch_probs = tf.scalar_mul(-1, tf.add(target_words_unigram_prob, neg_target_word_unigram_probs))
     
     return batch_probs
-

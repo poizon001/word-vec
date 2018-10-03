@@ -38,20 +38,9 @@ output_file = open('word_analogy_'+ loss_model+'.txt', 'w')
 print('word_analogy_'+ loss_model+'.txt')
 result = ""
 
-def getCosineSimilarity(v1, v2):
-	return 1 - spatial.distance.cosine(v1, v2)
+def getCosineSimilarity(word1, word2):
+	return 1 - spatial.distance.cosine(word1, word2)
 
-def getSimilarityForPairs(pairsList):
-	similarity = []
-	for pair in pairsList:
-		first_embedding_vector = embeddings[dictionary[pair[0]]]
-		second_embedding_vector = embeddings[dictionary[pair[1]]]
-		similarity.append(getCosineSimilarity(first_embedding_vector, second_embedding_vector))
-
-	return similarity
-
-def getAvgOfList(numList):
-	return sum(numList)/len(numList)
 
 line_result = ""
 
@@ -59,32 +48,48 @@ for lines in input_file:
 	lines.strip()
 	parts = lines.split("||")
 
-	left_word_pairs = parts[0]
-	left_word_pairs = left_word_pairs.strip().split(",")
-	left_word_pairs = [(x.lstrip("\"").rstrip("\"").split(":")) for x in left_word_pairs]
+	example_word_pairs = parts[0]
+	example_word_pairs = example_word_pairs.strip().split(",")
+	example_word_pairs = [(x.lstrip("\"").rstrip("\"").split(":")) for x in example_word_pairs]
 
-	right_word_pairs = parts[1]
-	right_word_pairs = right_word_pairs.strip().split(",")
-	line_result += ' '.join(right_word_pairs)
+	choices_word_pairs = parts[1]
+	choices_word_pairs = choices_word_pairs.strip().split(",")
+	line_result += ' '.join(choices_word_pairs)
 
-	right_word_pairs = [(x.lstrip("\"").rstrip("\"").split(":")) for x in right_word_pairs]
+	choices_word_pairs = [(x.lstrip("\"").rstrip("\"").split(":")) for x in choices_word_pairs]
 
-	left_cosine_similarity = getSimilarityForPairs(left_word_pairs)
-	left_cosine_similarity_avg = getAvgOfList(left_cosine_similarity)
+	print(choices_word_pairs)
+	print(example_word_pairs)
 
-	# print("left sim avg", left_cosine_similarity_avg)
-	right_cosine_similarity = getSimilarityForPairs(right_word_pairs)
-	# print("right_cosine_similarity", right_cosine_similarity)
+	example_rel = np.zeros(embeddings.shape[1])
+	for pair in example_word_pairs:
+		word1_embed = embeddings[dictionary[pair[0]]]
+		word2_embed = embeddings[dictionary[pair[1]]]
+		
+		rel = word1_embed - word2_embed
+		example_rel = example_rel + rel
+	
+	avg_rel = example_rel/len(example_rel)
+	print(avg_rel)
 
 
-	right_cosine_similarity = [x - left_cosine_similarity_avg for x in right_cosine_similarity]
-	# print("right_cosine_similarity", right_cosine_similarity)
+	choices_similarity=[]
+	for pair in choices_word_pairs:
+		word1_embed = embeddings[dictionary[pair[0]]]
+		word2_embed = embeddings[dictionary[pair[1]]]
 
-	min_dis_pair = right_word_pairs[right_cosine_similarity.index(min(right_cosine_similarity))]
-	max_dis_pair = right_word_pairs[right_cosine_similarity.index(max(right_cosine_similarity))]
+		rel = word1_embed - word2_embed
+		choices_similarity.append(getCosineSimilarity(avg_rel, rel))
+
+	print(choices_similarity)
+
+	max_dis_pair = choices_word_pairs[choices_similarity.index(max(choices_similarity))]
+	min_dis_pair = choices_word_pairs[choices_similarity.index(min(choices_similarity))]
 
 	line_result += " \"" + min_dis_pair[0]+":"+min_dis_pair[1] + "\" \"" + max_dis_pair[0]+":"+max_dis_pair[1] + "\""+"\n"
 
 print(line_result)
 output_file.write(line_result)
 output_file.close()
+
+
